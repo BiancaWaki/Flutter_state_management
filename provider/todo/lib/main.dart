@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:todo/model/todo_api.dart';
 import 'package:todo/presenter/home_presenter.dart';
+import 'package:todo/presenter/register_presenter.dart';
 import 'package:todo/view/login.dart';
 import 'package:todo/presenter/login_presenter.dart';
 
@@ -12,6 +13,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => LoginPresenter(api: api)),
         ChangeNotifierProvider(create: (_) => HomePresenter(api: api)),
+        ChangeNotifierProvider(create: (_) => RegisterPresenter(api: api)),
       ],
       child: const MyApp(),
     ),

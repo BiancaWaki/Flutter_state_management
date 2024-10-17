@@ -23,12 +23,11 @@ class TodoApi {
       print('Login bem-sucedido! Token: $_jwtToken');
       return true;
     }
-    // ignore: dead_code
     return false;
   }
 
   // Cadastro de Usuário
-  Future<void> register(String username, String email, String password) async {
+  Future<bool> register(String username, String email, String password) async {
     final url = Uri.parse('$baseUrl/auth/local/register');
     final response = await http.post(
       url,
@@ -44,9 +43,9 @@ class TodoApi {
       final responseData = jsonDecode(response.body);
       _jwtToken = responseData['jwt'];
       print('Cadastro bem-sucedido! Token: $_jwtToken');
-    } else {
-      throw Exception('Falha no cadastro: ${response.body}');
+      return true;
     }
+    return false;
   }
 
   // Listar TODOs
