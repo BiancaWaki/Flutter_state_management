@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:todo/presenter/home_presenter.dart';
+import 'package:todo/presenter/app_presenter.dart';
 import 'package:todo/view/todo.dart';
 
 class Home extends StatefulWidget {
@@ -10,18 +10,16 @@ class Home extends StatefulWidget {
   State<Home> createState() => _HomeState();
 }
 
-class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
+class _HomeState extends State<Home> {
   late AnimationController _controller;
-  late Future<List<dynamic>> _todosFuture;
 
   @override
   void initState() {
+    final presenter = Provider.of<AppPresenter>(context, listen: false);
+    if (!presenter.loadingTodos) {
+      presenter.getTodos();
+    }
     super.initState();
-    _controller = AnimationController(vsync: this);
-
-    // Carrega os TODOs no início
-    final presenter = Provider.of<HomePresenter>(context, listen: false);
-    _todosFuture = presenter.api.getTodos();
   }
 
   @override
@@ -30,31 +28,8 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
     super.dispose();
   }
 
-  Future<void> _deleteTodo(int todoId) async {
-    try {
-      final presenter = Provider.of<HomePresenter>(context, listen: false);
-      await presenter.api.deleteTodo(todoId);
-      setState(() {
-        _todosFuture =
-            presenter.api.getTodos(); // Recarrega a lista após deletar
-      });
-    } catch (e) {
-      print('Erro ao excluir TODO: $e');
-    }
-  }
-
-  Future<void> _createTodo(
-      String title, String description, String color) async {
-    try {
-      final presenter = Provider.of<HomePresenter>(context, listen: false);
-      await presenter.api.createTodo(title, description, color);
-      setState(() {
-        _todosFuture =
-            presenter.api.getTodos(); // Recarrega a lista após adicionar
-      });
-    } catch (e) {
-      print('Erro ao adicionar TODO: $e');
-    }
+  Future<void> deleteTodo(AppPresenter presenter, int todoId) async {
+    await presenter.deleteTodo(todoId);
   }
 
   @override
@@ -88,70 +63,59 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                 ),
               ),
               Expanded(
-                child: FutureBuilder<List<dynamic>>(
-                  future: _todosFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
+                child: Consumer<AppPresenter>(
+                  builder: (context, presenter, child) {
+                    if (presenter.loadingTodos) {
                       return const Center(
-                        child: CircularProgressIndicator(
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
+                        child: CircularProgressIndicator(),
                       );
-                    } else if (snapshot.hasError) {
-                      return Text('Erro ao carregar TODOs: ${snapshot.error}');
-                    } else if (snapshot.hasData) {
-                      final todos = snapshot.data!;
-                      if (todos.isEmpty) {
-                        return const Text('Nenhum TODO encontrado.');
-                      }
-                      return ListView.builder(
-                        itemCount: todos.length,
-                        itemBuilder: (context, index) {
-                          final todo = todos[index];
-                          final title =
-                              todo['attributes']['title'] ?? 'Sem título';
-                          final description = todo['attributes']
-                                  ['description'] ??
-                              'Sem descrição';
-                          final color =
-                              todo['attributes']['color'] ?? '#FFFFFF';
-                          final todoId = todo['id'];
+                    }
+                    return ListView.builder(
+                      itemCount: presenter.todos.length,
+                      itemBuilder: (context, index) {
+                        final todo = presenter.todos[index];
+                        final title =
+                            todo['attributes']['title'] ?? 'Sem título';
+                        final description = todo['attributes']['description'] ??
+                            'Sem descrição';
+                        final color = todo['attributes']['color'] ?? '#FFFFFF';
+                        final todoId = todo['id'];
 
-                          return Card(
-                            color: Color(
-                                int.parse(color.replaceFirst('#', '0xff'))),
-                            child: ListTile(
-                              contentPadding:
-                                  EdgeInsets.only(left: 15, bottom: 20),
-                              title: Text(
-                                title,
-                                style: const TextStyle(
-                                  color: Color(0xFF3101B9),
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              subtitle: Text(
-                                description,
-                                style: const TextStyle(
-                                  color: Color(0xFF3101B9),
-                                ),
-                              ),
-                              trailing: IconButton(
-                                icon: const Icon(
-                                  Icons.delete_outline_sharp,
-                                  color: Color(0xFF3101B9),
-                                ),
-                                onPressed: () => _confirmDelete(context, todoId,
-                                    title), // Confirmação de deleção
+                        return Card(
+                          color:
+                              Color(int.parse(color.replaceFirst('#', '0xff'))),
+                          child: ListTile(
+                            contentPadding:
+                                const EdgeInsets.only(left: 15, bottom: 20),
+                            title: Text(
+                              title,
+                              style: const TextStyle(
+                                color: Color(0xFF3101B9),
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                          );
-                        },
-                      );
-                    } else {
-                      return const Text('Nenhum TODO disponível.');
-                    }
+                            subtitle: Text(
+                              description,
+                              style: const TextStyle(
+                                color: Color(0xFF3101B9),
+                              ),
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(
+                                Icons.delete_outline_sharp,
+                                color: Color(0xFF3101B9),
+                              ),
+                              onPressed: () => _confirmDelete(
+                                presenter: presenter,
+                                context: context,
+                                todoId: todoId,
+                                title: title,
+                              ), // Confirmação de deleção
+                            ),
+                          ),
+                        );
+                      },
+                    );
                   },
                 ),
               ),
@@ -161,12 +125,17 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                   color: Colors.white,
                 ),
                 onPressed: () {
-                  // _showAddTodoDialog(context);
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => Todo(
-                        createTodo: _createTodo,
+                        createTodo: (presenter, title, description, color) =>
+                            createTodo(
+                          presenter: presenter,
+                          title: title,
+                          description: description,
+                          color: color,
+                        ),
                       ),
                     ),
                   );
@@ -182,7 +151,12 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
   }
 
   // Função para exibir um diálogo de confirmação antes de deletar
-  void _confirmDelete(BuildContext context, int todoId, String title) {
+  void _confirmDelete({
+    required AppPresenter presenter,
+    required BuildContext context,
+    required int todoId,
+    required String title,
+  }) {
     showDialog(
       context: context,
       builder: (context) {
@@ -193,7 +167,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop(); // Fecha o diálogo
-                _deleteTodo(todoId); // Executa a exclusão
+                deleteTodo(presenter, todoId); // Executa a exclusão
               },
               child: const Text(
                 'Confirmar',
@@ -210,6 +184,20 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
           ],
         );
       },
+    );
+  }
+
+  // Função para criar um novo TODOß
+  Future<void> createTodo({
+    required AppPresenter presenter,
+    required String title,
+    required String description,
+    required String color,
+  }) async {
+    await presenter.createTodo(
+      title: title,
+      description: description,
+      color: color,
     );
   }
 }

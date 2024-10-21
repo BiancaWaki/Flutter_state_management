@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:todo/presenter/login_presenter.dart';
+import 'package:todo/presenter/app_presenter.dart';
 import 'package:todo/view/home.dart';
 import 'package:todo/view/register.dart';
 
@@ -26,15 +26,14 @@ class _LoginState extends State<Login> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFA901F7),
       body: Container(
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Consumer<LoginPresenter>(
+            Consumer<AppPresenter>(
               builder: (context, presenter, child) {
-                if (presenter.loading) {
+                if (presenter.loadingLogin) {
                   return const Center(
                     child: CircularProgressIndicator(),
                   );
@@ -46,19 +45,17 @@ class _LoginState extends State<Login> {
                     const Text(
                       'Que bom que voltou!',
                       style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
                         fontSize: 30,
                       ),
                     ),
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 30),
-                    ),
+                    const SizedBox(height: 30),
                     TextField(
                       controller: emailController,
                       decoration: const InputDecoration(
                         contentPadding: EdgeInsets.symmetric(
-                            vertical: 10, horizontal: 15), // Ajusta o padding
+                          vertical: 10,
+                          horizontal: 15,
+                        ),
                         hintText: 'Número de telefone, email ou CPF',
                         border: OutlineInputBorder(),
                       ),
@@ -69,7 +66,9 @@ class _LoginState extends State<Login> {
                       controller: passwordController,
                       decoration: InputDecoration(
                         contentPadding: const EdgeInsets.symmetric(
-                            vertical: 10, horizontal: 15),
+                          vertical: 10,
+                          horizontal: 15,
+                        ),
                         hintText: 'Senha',
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
@@ -167,10 +166,10 @@ class _LoginState extends State<Login> {
     );
   }
 
-  Future<void> login(LoginPresenter presenter) async {
+  Future<void> login(AppPresenter presenter) async {
     String email = emailController.text;
     String password = passwordController.text;
-    final result = await presenter.login(email, password);
+    final result = await presenter.login(username: email, password: password);
     if (result) {
       Navigator.push(context, MaterialPageRoute(builder: (context) => Home()));
     } else {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:todo/presenter/register_presenter.dart';
+import 'package:todo/presenter/app_presenter.dart';
 
 class Register extends StatefulWidget {
   const Register({super.key});
@@ -21,7 +21,7 @@ class _RegisterState extends State<Register> {
         title: const Text('Cadastro'),
         centerTitle: true,
       ),
-      body: Consumer<RegisterPresenter>(
+      body: Consumer<AppPresenter>(
         builder: (context, presenter, child) {
           return Container(
             padding: const EdgeInsets.all(30),
@@ -89,11 +89,15 @@ class _RegisterState extends State<Register> {
     );
   }
 
-  Future<void> register(RegisterPresenter presenter) async {
+  Future<void> register(AppPresenter presenter) async {
     String email = emailController.text;
     String password = passwordController.text;
     String name = nameController.text;
-    final result = await presenter.register(name, email, password);
+    final result = await presenter.register(
+      name: name,
+      email: email,
+      password: password,
+    );
     if (result) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cadastro bem-sucedido!')),
