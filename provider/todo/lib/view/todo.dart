@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:todo/presenter/app_presenter.dart';
+import 'package:todo/presenter/todo_presenter.dart';
 
 class Todo extends StatefulWidget {
-  const Todo({super.key, required this.createTodo});
-
-  final Function(AppPresenter, String, String, String) createTodo;
+  const Todo({super.key});
 
   @override
   State<Todo> createState() => _TodoState();
@@ -14,14 +12,14 @@ class Todo extends StatefulWidget {
 class _TodoState extends State<Todo> {
   final titleController = TextEditingController();
   final descriptionController = TextEditingController();
-  String selectedColor = "#ffe2e0"; // Cor padrão pastel
+  String selectedColor = "#FFF2CC"; // Cor padrão pastel
 
   final List<String> pastelColors = [
-    "#ffe2e0", // Vermelho pastel
-    "#fff1b3", // Amarelo pastel
-    "#d4f4ff", // Azul pastel
-    "#d3ffd4", // Verde pastel
-    "#f6d1f7", // Rosa pastel
+    "#FFF2CC", // Amarelo pastel
+    "#FFD9F0", // Rosa pastel
+    "#E8C5FF", // Roxo pastel
+    "#CAFBFF", // Azul pastel
+    "#E3FFE6", // Verde pastel
   ];
 
   @override
@@ -39,9 +37,9 @@ class _TodoState extends State<Todo> {
       body: Center(
         child: Container(
           padding: const EdgeInsets.all(30),
-          child: Consumer<AppPresenter>(
+          child: Consumer<TodoPresenter>(
             builder: (context, presenter, child) {
-              if (presenter.loadingLogin) {
+              if (presenter.loadingTodo) {
                 return const Center(
                   child: CircularProgressIndicator(),
                 );
@@ -99,7 +97,7 @@ class _TodoState extends State<Todo> {
                           color: Colors.white,
                         ),
                         onPressed: () {
-                          Navigator.of(context).pop();
+                          Navigator.of(context).pop(false);
                         },
                         tooltip: 'Adicionar TODO',
                         iconSize: 100,
@@ -111,16 +109,20 @@ class _TodoState extends State<Todo> {
                           color: Colors.white,
                           size: 80,
                         ),
-                        onPressed: () {
+                        onPressed: () async {
                           final title = titleController.text;
                           final description = descriptionController.text;
 
                           if (title.isNotEmpty &&
                               description.isNotEmpty &&
                               selectedColor.isNotEmpty) {
-                            widget.createTodo(
-                                presenter, title, description, selectedColor);
-                            Navigator.of(context).pop();
+                            await context.read<TodoPresenter>().createTodo(
+                                  title: title,
+                                  description: description,
+                                  color: selectedColor,
+                                );
+
+                            Navigator.pop(context, true);
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(

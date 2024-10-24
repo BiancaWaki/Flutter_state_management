@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:todo/presenter/app_presenter.dart';
+import 'package:todo/presenter/register_presenter.dart';
 
 class Register extends StatefulWidget {
   const Register({super.key});
@@ -21,7 +21,7 @@ class _RegisterState extends State<Register> {
         title: const Text('Cadastro'),
         centerTitle: true,
       ),
-      body: Consumer<AppPresenter>(
+      body: Consumer<RegisterPresenter>(
         builder: (context, presenter, child) {
           return Container(
             padding: const EdgeInsets.all(30),
@@ -89,7 +89,7 @@ class _RegisterState extends State<Register> {
     );
   }
 
-  Future<void> register(AppPresenter presenter) async {
+  Future<void> register(RegisterPresenter presenter) async {
     String email = emailController.text;
     String password = passwordController.text;
     String name = nameController.text;

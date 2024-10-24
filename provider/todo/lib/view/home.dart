@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:todo/presenter/app_presenter.dart';
-import 'package:todo/view/todo.dart';
+import 'package:todo/presenter/home_presenter.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -15,10 +14,10 @@ class _HomeState extends State<Home> {
 
   @override
   void initState() {
-    final presenter = Provider.of<AppPresenter>(context, listen: false);
-    if (!presenter.loadingTodos) {
+    final presenter = Provider.of<HomePresenter>(context, listen: false);
+    Future.delayed(Duration.zero).then((value) {
       presenter.getTodos();
-    }
+    });
     super.initState();
   }
 
@@ -28,7 +27,7 @@ class _HomeState extends State<Home> {
     super.dispose();
   }
 
-  Future<void> deleteTodo(AppPresenter presenter, int todoId) async {
+  Future<void> deleteTodo(HomePresenter presenter, int todoId) async {
     await presenter.deleteTodo(todoId);
   }
 
@@ -36,6 +35,17 @@ class _HomeState extends State<Home> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.logout),
+          onPressed: () async {
+            await context.read<HomePresenter>().logout();
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/login',
+              (route) => false,
+            );
+          },
+        ),
         shadowColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
@@ -50,27 +60,31 @@ class _HomeState extends State<Home> {
       body: Center(
         child: Container(
           padding: const EdgeInsets.only(left: 30, right: 30),
-          child: Column(
-            children: [
-              const Padding(
-                padding: EdgeInsets.all(0.0),
-                child: TextField(
-                  decoration: InputDecoration(
-                    suffixIcon: Icon(Icons.search, color: Color(0xFF3101B9)),
-                    hintText: 'Busque palavras-chave',
-                    border: OutlineInputBorder(),
+          child: Consumer<HomePresenter>(
+            builder: (context, presenter, child) {
+              if (presenter.loadingHome) {
+                return const Center(
+                  child: CircularProgressIndicator(),
+                );
+              }
+              return Column(
+                children: [
+                  // Campo de busca
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 10),
+                    child: TextField(
+                      decoration: InputDecoration(
+                        suffixIcon:
+                            Icon(Icons.search, color: Color(0xFF3101B9)),
+                        hintText: 'Busque palavras-chave',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              Expanded(
-                child: Consumer<AppPresenter>(
-                  builder: (context, presenter, child) {
-                    if (presenter.loadingTodos) {
-                      return const Center(
-                        child: CircularProgressIndicator(),
-                      );
-                    }
-                    return ListView.builder(
+
+                  // Lista de todos
+                  Expanded(
+                    child: ListView.builder(
                       itemCount: presenter.todos.length,
                       itemBuilder: (context, index) {
                         final todo = presenter.todos[index];
@@ -115,35 +129,26 @@ class _HomeState extends State<Home> {
                           ),
                         );
                       },
-                    );
-                  },
-                ),
-              ),
-              IconButton(
-                icon: const Icon(
-                  Icons.add_rounded,
-                  color: Colors.white,
-                ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => Todo(
-                        createTodo: (presenter, title, description, color) =>
-                            createTodo(
-                          presenter: presenter,
-                          title: title,
-                          description: description,
-                          color: color,
-                        ),
-                      ),
                     ),
-                  );
-                },
-                tooltip: 'Adicionar TODO',
-                iconSize: 100,
-              ),
-            ],
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.add_rounded,
+                      color: Colors.white,
+                    ),
+                    onPressed: () async {
+                      final result =
+                          await Navigator.pushNamed(context, '/todo');
+                      if (result == true) {
+                        presenter.getTodos();
+                      }
+                    },
+                    tooltip: 'Adicionar TODO',
+                    iconSize: 100,
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -152,7 +157,7 @@ class _HomeState extends State<Home> {
 
   // Função para exibir um diálogo de confirmação antes de deletar
   void _confirmDelete({
-    required AppPresenter presenter,
+    required HomePresenter presenter,
     required BuildContext context,
     required int todoId,
     required String title,
@@ -187,9 +192,9 @@ class _HomeState extends State<Home> {
     );
   }
 
-  // Função para criar um novo TODOß
+  // Função para criar um novo Todo
   Future<void> createTodo({
-    required AppPresenter presenter,
+    required HomePresenter presenter,
     required String title,
     required String description,
     required String color,
